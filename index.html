@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pie Chart App</title>
+    <script src="https://cdn.jsdelivr.net/npm/@svgdotjs/svg.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* 您可以在此處添加CSS樣式 */
+    </style>
+</head>
+<body>
+    <div style="display: flex;">
+        <!-- 左側：圓餅圖 -->
+        <div>
+            <div id="pieChartSVG"></div>
+            <div id="pieLabels"></div>
+        </div>
+        <!-- 右側：控制面板 -->
+        <div>
+            <button id="addBtn">+</button>
+            <button id="subtractBtn" disabled>-</button>
+            <div id="dataInputs">
+                <div class="inputSet">
+                    a. 
+                    <input type="number" class="percentageInput" value="100" min="0" max="100" step="1">%, 
+                    <button class="increasePercentage">+</button>
+                    <button class="decreasePercentage">-</button>
+                    <input type="text" class="labelInput" placeholder="輸入代表的通用格式文字">
+                </div>
+            </div>
+            <div>
+                <button id="copySvgBtn">複製SVG</button>
+                <button id="saveSvgBtn">保存SVG</button>
+                <button id="exportPNG">PNG</button>
+                <button id="exportJPEG">JPEG</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const colors = [
+            '#FF6384', '#36A2EB','#FF5733', '#4BC0C0','#9966FF','#FF9F40', '#FFCD56', '#C9CBCF','#24CBE5'
+        ];
+
+        
+        let currentCount = 1;
+        let draw; // 將SVG畫布保存為全局變量
+
+        function initPieChart() {
+            console.log("draw object before initialization:", draw);
+            
+            // 創建SVG畫布
+            draw = SVG().addTo('#pieChartSVG').size(400, 400);
+            console.log("draw object after initialization:", draw);
+            drawPieChart(); // 繪製初始的100%圓餅圖
+
+            // 監聽百分比輸入框的更改
+            document.querySelectorAll('.percentageInput').forEach(input => {
+                input.addEventListener('input', updatePieChart);
+            });
+
+            // 監聽標籤輸入框的更改
+            document.querySelectorAll('.labelInput').forEach(input => {
+                input.addEventListener('input', updatePieChart);
+            });
+
+            // ... (其他的事件監聽器和初始化代碼)
+        }
+
+        function drawPieChart() {
+            draw.clear(); // 清除畫布上的所有內容
+            const percentages = document.getElementsByClassName('percentageInput');
+            let startAngle = 0;
+
+            for (let i = 0; i < currentCount; i++) {
+                const sliceAngle = 2 * Math.PI * (parseFloat(percentages[i].value) || 0) / 100;
+                drawSlice(draw, startAngle, sliceAngle, colors[i]);
+                startAngle += sliceAngle;
+            }
+        }
+
+        function drawSlice(draw, startAngle, sliceAngle, color) {
+            const path = draw.path(`M200,200 L${200 + 200 * Math.cos(startAngle)} ${200 + 200 * Math.sin(startAngle)} A200,200 0 ${sliceAngle > Math.PI ? 1 : 0},1 ${200 + 200 * Math.cos(startAngle + sliceAngle)} ${200 + 200 * Math.sin(startAngle + sliceAngle)} Z`);
+            path.fill(color);
+        }
+        
+        function updateInputs() {
+            const dataInputs = document.getElementById('dataInputs');
+            dataInputs.innerHTML = '';
+            for (let i = 0; i < currentCount; i++) {
+                const letter = String.fromCharCode(97 + i);
+                const inputSet = document.createElement('div');
+                inputSet.className = 'inputSet';
+                inputSet.innerHTML = `${letter}. 
+                    <input type="number" class="percentageInput" value="${Math.round(100/currentCount)}" tabindex="${2*i+1}">%, 
+                    <button class="increasePercentage">+</button>
+                    <button class="decreasePercentage">-</button>
+                    <input type="text" class="labelInput" placeholder="輸入文字 & Typing" tabindex="${2*i+2}">`;
+                dataInputs.appendChild(inputSet);
+            }
+
+            // 為新的按鈕綁定事件監聽器
+            document.querySelectorAll('.increasePercentage').forEach((btn, index) => {
+                btn.addEventListener('click', function() {
+                    const input = document.querySelectorAll('.percentageInput')[index];
+                    let value = parseInt(input.value, 10);
+                    if (value < 100) {
+                        value++;
+                        input.value = value;
+                        updatePieChart();
+                    }
+                });
+            });
+
+            document.querySelectorAll('.decreasePercentage').forEach((btn, index) => {
+                btn.addEventListener('click', function() {
+                    const input = document.querySelectorAll('.percentageInput')[index];
+                    let value = parseInt(input.value, 10);
+                    if (value > 0) {
+                        value--;
+                        input.value = value;
+                        updatePieChart();
+                    }
+                });
+            });
+
+            // 為新的百分比輸入框添加事件監聽器
+            document.querySelectorAll('.percentageInput').forEach(input => {
+                input.addEventListener('input', updatePieChart);
+            });
+
+            // 為新的標籤輸入框添加事件監聽器
+            document.querySelectorAll('.labelInput').forEach(input => {
+                input.addEventListener('input', updatePieChart);
+            });
+
+            // 為每個輸入框添加keydown事件監聽器
+            document.querySelectorAll('input').forEach((input, index) => {
+                input.addEventListener('keydown', function(event) {
+                    if (event.key === 'Tab') {
+                        event.preventDefault();
+                        if (index % 2 === 0) { // 如果是數字輸入框
+                            document.querySelectorAll('input')[index + 2].focus();
+                        } else { // 如果是文字輸入框
+                            document.querySelectorAll('input')[index + 1].focus();
+                        }
+                    } else if (event.key === 'Enter') {
+                        event.preventDefault();
+                        if (index % 2 === 0) { // 如果是數字輸入框
+                            document.querySelectorAll('input')[index + 1].focus();
+                        } else { // 如果是文字輸入框
+                            document.querySelectorAll('input')[index + 2].focus();
+                        }
+                    }
+                });
+            });
+        }
+
+
+
+        function calculateTotalValue() {
+            const percentageInputs = document.querySelectorAll('.percentageInput');
+            let totalValue = 0;
+            percentageInputs.forEach(input => {
+                totalValue += parseFloat(input.value) || 0;
+            });
+            return totalValue;
+        }
+
+        function updatePieChart() {
+            const totalValue = calculateTotalValue();
+            const percentages = document.querySelectorAll('.percentageInput');
+            let startAngle = 0;
+
+            for (let i = 0; i < percentages.length; i++) {
+                const value = parseFloat(percentages[i].value) || 0;
+                const sliceAngle = 2 * Math.PI * value / totalValue;
+                drawSlice(draw, startAngle, sliceAngle, colors[i]);
+                startAngle += sliceAngle;
+            }
+
+            // 更新標籤
+            const labelsDiv = document.getElementById('pieLabels');
+            labelsDiv.innerHTML = '';
+            const labelInputs = document.querySelectorAll('.labelInput');
+            for (let i = 0; i < labelInputs.length; i++) {
+                const value = parseFloat(percentages[i].value) || 0; // 重新計算每個部分的值
+                const label = document.createElement('div');
+                label.style.color = colors[i];
+                label.textContent = `${String.fromCharCode(97 + i)}. ${labelInputs[i].value} (${Math.round(value / totalValue * 100)}%)`;
+                labelsDiv.appendChild(label);
+            }
+        }
+
+
+        document.getElementById('addBtn').addEventListener('click', function() {
+            if (currentCount < 9) {
+                currentCount++;
+                updateInputs();
+                drawPieChart();
+            }
+            document.getElementById('subtractBtn').disabled = currentCount <= 1;
+        });
+
+        document.getElementById('subtractBtn').addEventListener('click', function() {
+            if (currentCount > 1) {
+                currentCount--;
+                updateInputs();
+                drawPieChart();
+            }
+            document.getElementById('subtractBtn').disabled = currentCount <= 1;
+        });
+
+        document.querySelectorAll('.increasePercentage').forEach((btn, index) => {
+            btn.addEventListener('click', function() {
+                const input = document.querySelectorAll('.percentageInput')[index];
+                let value = parseInt(input.value, 10);
+                if (value < 100) {
+                    value++;
+                    input.value = value;
+                    updatePieChart();
+                }
+            });
+        });
+
+        document.querySelectorAll('.decreasePercentage').forEach((btn, index) => {
+            btn.addEventListener('click', function() {
+                const input = document.querySelectorAll('.percentageInput')[index];
+                let value = parseInt(input.value, 10);
+                if (value > 0) {
+                    value--;
+                    input.value = value;
+                    updatePieChart();
+                }
+            });
+        });
+
+        // 確保輸入的百分比在0到100之間
+        document.querySelectorAll('.percentageInput').forEach(input => {
+            input.addEventListener('input', function() {
+                let value = parseInt(input.value, 10);
+                if (value > 100) {
+                    input.value = 100;
+                } else if (value < 0) {
+                    input.value = 0;
+                }
+                updatePieChart();
+            });
+        });
+        // 將SVG轉換為Canvas的函數
+        function svgToCanvas(svgElement) {
+            return new Promise((resolve, reject) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas);
+                };
+                img.onerror = reject;
+                img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgElement.outerHTML)));
+            });
+        }
+
+        // 將Canvas轉換為Blob並複製到剪貼板的函數
+        async function copyCanvasToClipboard(canvas) {
+            try {
+                const blob = await new Promise(resolve => canvas.toBlob(resolve));
+                await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
+                alert('SVG圖像已複製到剪貼板');
+            } catch (err) {
+                console.error('無法複製圖像: ', err);
+                alert('複製失敗');
+            }
+        }
+
+        // 修改後的事件處理函數
+        document.getElementById('copySvgBtn').addEventListener('click', async function() {
+            try {
+                const svgElement = document.getElementById('pieChartSVG');
+                const canvas = await svgToCanvas(svgElement);
+                await copyCanvasToClipboard(canvas);
+            } catch (err) {
+                console.error('無法複製SVG: ', err);
+                alert('複製失敗');
+            }
+        });
+        // 輸出按鈕的功能尚未實現，您可以根據需要添加
+
+        document.getElementById('saveSvgBtn').addEventListener('click', function() {
+            const svgElement = document.getElementById('pieChartSVG').innerHTML;
+            const blob = new Blob([svgElement], {type: "image/svg+xml"});
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'pieChart.svg';
+            link.click();
+
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('exportPNG').addEventListener('click', function() {
+            exportSVGToImage('png');
+        });
+
+        document.getElementById('exportJPEG').addEventListener('click', function() {
+            exportSVGToImage('jpeg');
+        });
+
+        function exportSVGToImage(format) {
+            const svgContent = new XMLSerializer().serializeToString(document.querySelector('svg'));
+            const canvas = document.createElement('canvas');
+            canvas.width = 400;
+            canvas.height = 400;
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0);
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL(`image/${format}`);
+                link.download = `pieChart.${format}`;
+                link.click();
+            };
+            img.src = 'data:image/svg+xml;base64,' + window.btoa(unescape(encodeURIComponent(svgContent)));
+        }
+        // 設置window.onload
+        window.onload = initPieChart; 
+
+    </script>
+</body>
+</html>
